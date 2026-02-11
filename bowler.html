@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bowler</title>
+<style>
+	* { margin: 0; padding: 0; box-sizing: border-box; }
+	body {
+		background: #121320;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		height: 100vh;
+		font-family: monospace;
+		overflow: hidden;
+	}
+	canvas {
+		border: 4px solid #ff6b6b;
+		image-rendering: pixelated;
+		image-rendering: crisp-edges;
+		cursor: crosshair;
+	}
+</style>
+</head>
+<body>
+<canvas id="game" width="480" height="720"></canvas>
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const W = canvas.width;
+const H = canvas.height;
+
+const COL = {
+	bg: '#121320',
+	lane: '#c7a862',
+	laneEdge: '#9a7a2f',
+	gutter: '#3a3a3a',
+	pin: '#ffffff',
+	pinShade: '#cfcfcf',
+	pinStripe: '#ff6b6b',
+	ball: '#ff6b6b',
+	ballShine: '#ff9aa2',
+	scoreBg: '#0f1a2b',
+	scoreText: '#e6e6e6',
+	strike: '#ffd166',
+	spare: '#06d6a0'
+};
+
+const TOTAL_FRAMES = 10;
+let gameState = 'title';
+let frame = 0;
+let rollInFrame = 0;
+let scores = [];
+let frameScores = [];
+let rolls = [];
+let totalScore = 0;
+
+let aimAngle = 0;
+let aimDir = 1;
+let power = 0;
+let powerDir = 1;
+
+let ballX, ballY, ballVX, ballVY;
+let ballRadius = 20;
+
+const GUTTER_W = 40;
+const LANE_LEFT = GUTTER_W;
+const LANE_RIGHT = W - GUTTER_W;
+const LANE_CENTER = W / 2;
+
+const PIN_RADIUS = 8;
+const PIN_SPACING_X = 38;
+const PIN_SPACING_Y = 38;
+const PIN_START_Y = 120;
+
+const pinFormation = [
+	{r:0, c:0},
+	{r:1, c:-1}, {r:1, c:1},
+	{r:2, c:-2}, {r:2, c:0}, {r:2, c:2},
+	{r:3, c:-3}, {r:3, c:-1}, {r:3, c:1}, {r:3, c:3}
+];
+
+let pins = [];
+let pinsKnockedThisRoll = 0;
+
+let flashText = '';
+let flashTimer = 0;
+let flashColor = '#fff';
+
+// ---- Audio ----
+let audioCtx = null;
+let lastHitSound = 0;
+
+function initAudio() {
+	if (!audioCtx) {
+		const AudioContextRef = window.AudioContext || window.webkitAudioContext;
+		audioCtx = new AudioContextRef();
+	}
+	if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playTone({freq, duration = 0.08, type = 'square', gain = 0.08, slide = 0}) {
+	if (!audioCtx) return;
+	const now = audioCtx.currentTime;
+	const osc = audioCtx.createOscillator();
+	const amp = audioCtx.createGain();
+	osc.type = type;
+	osc.frequency.setValueAtTime(freq, now);
+	if (slide !== 0) {
+		osc.frequency.exponentialRampToValueAtTime(Math.max(40, freq + slide), now + duration);
+	}
+	amp.gain.setValueAtTime(0.001, now);
+	amp.gain.exponentialRampToValueAtTime(gain, now + 0.01);
+	amp.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+	osc.connect(amp).connect(audioCtx.destination);
+	osc.start(now);
+	osc.stop(now + duration + 0.02);
+}
+
+function playNoise({duration = 0.4, gain = 0.06, hp = 400, lp = 2200}) {
+	if (!audioCtx) return;
+	const now = audioCtx.currentTime;
+	const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * duration, audioCtx.sampleRate);
+	const data = buffer.getChannelData(0);
+	for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.5;
+	const src = audioCtx.createBufferSource();
+	src.buffer = buffer;
+	const hpFilter = audioCtx.createBiquadFilter();
+	hpFilter.type = 'highpass';
+	hpFilter.frequency.setValueAtTime(hp, now);
+	const lpFilter = audioCtx.createBiquadFilter();
+	lpFilter.type = 'lowpass';
+	lpFilter.frequency.setValueAtTime(lp, now);
+	const amp = audioCtx.createGain();
+	amp.gain.setValueAtTime(0.001, now);
+	amp.gain.exponentialRampToValueAtTime(gain, now + 0.02);
+	amp.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+	src.connect(hpFilter).connect(lpFilter).connect(amp).connect(audioCtx.destination);
+	src.start(now);
+	src.stop(now + duration + 0.02);
+}
+
+function playCheer() {
+	playNoise({duration: 0.5, gain: 0.07, hp: 500, lp: 2400});
+	playTone({freq: 420, duration: 0.15, gain: 0.04, type: 'triangle', slide: 180});
+}
+
+function playSfx(name) {
+	if (!audioCtx) return;
+	if (name === 'click') {
+		playTone({freq: 660, duration: 0.05, gain: 0.05});
+	} else if (name === 'launch') {
+		playTone({freq: 220, duration: 0.12, gain: 0.08, slide: 120});
+	} else if (name === 'hit') {
+		playTone({freq: 520, duration: 0.04, gain: 0.05, type: 'square'});
+		playTone({freq: 260, duration: 0.05, gain: 0.03, type: 'triangle'});
+	} else if (name === 'strike') {
+		playTone({freq: 660, duration: 0.06, gain: 0.08});
+		playTone({freq: 880, duration: 0.06, gain: 0.08});
+		playTone({freq: 1320, duration: 0.08, gain: 0.09});
+		playCheer();
+	} else if (name === 'spare') {
+		playTone({freq: 740, duration: 0.06, gain: 0.07});
+		playTone({freq: 990, duration: 0.08, gain: 0.08});
+		playCheer();
+	}
+}
+
+function drawText(text, x, y, size = 16, color = '#fff', align = 'center') {
+	ctx.save();
+	ctx.font = `bold ${size}px monospace`;
+	ctx.fillStyle = color;
+	ctx.textAlign = align;
+	ctx.textBaseline = 'middle';
+	ctx.fillText(text, x, y);
+	ctx.restore();
+}
+
+function initPins() {
+	pins = [];
+	const maxRow = 3;
+	pinFormation.forEach(p => {
+		pins.push({
+			x: LANE_CENTER + p.c * (PIN_SPACING_X / 2),
+			y: PIN_START_Y + (maxRow - p.r) * PIN_SPACING_Y,
+			vx: 0,
+			vy: 0,
+			alive: true,
+			falling: false,
+			fallTimer: 0
+		});
+	});
+}
+
+function resetBall() {
+	ballX = LANE_CENTER;
+	ballY = H - 90;
+	ballVX = 0;
+	ballVY = 0;
+	aimAngle = 0;
+	aimDir = 1;
+	power = 0;
+	powerDir = 1;
+}
+
+function newGame() {
+	frame = 0;
+	rollInFrame = 0;
+	scores = [];
+	frameScores = [];
+	rolls = [];
+	totalScore = 0;
+	for (let i = 0; i < TOTAL_FRAMES; i++) scores.push([]);
+	initPins();
+	resetBall();
+	gameState = 'aiming';
+	flashText = '';
+}
+
+function recalcScores() {
+	frameScores = [];
+	let ri = 0;
+	for (let f = 0; f < TOTAL_FRAMES; f++) {
+		if (f < 9) {
+			if (rolls[ri] === 10) {
+				let bonus = (rolls[ri + 1] || 0) + (rolls[ri + 2] || 0);
+				frameScores.push(10 + bonus);
+				ri += 1;
+			} else if ((rolls[ri] || 0) + (rolls[ri + 1] || 0) === 10) {
+				let bonus = rolls[ri + 2] || 0;
+				frameScores.push(10 + bonus);
+				ri += 2;
+			} else {
+				frameScores.push((rolls[ri] || 0) + (rolls[ri + 1] || 0));
+				ri += 2;
+			}
+		} else {
+			let sum = 0;
+			for (let r = 0; r < scores[9].length; r++) sum += (scores[9][r] || 0);
+			frameScores.push(sum);
+			break;
+		}
+	}
+	totalScore = frameScores.reduce((a, b) => a + b, 0);
+}
+
+let spacePressed = false;
+document.addEventListener('keydown', e => {
+	if (e.code === 'Space' || e.code === 'Enter') {
+		e.preventDefault();
+		if (!spacePressed) {
+			spacePressed = true;
+			handleAction();
+		}
+	}
+});
+document.addEventListener('keyup', e => {
+	if (e.code === 'Space' || e.code === 'Enter') spacePressed = false;
+});
+canvas.addEventListener('click', () => handleAction());
+
+function handleAction() {
+	initAudio();
+	playSfx('click');
+	if (gameState === 'title') {
+		newGame();
+	} else if (gameState === 'aiming') {
+		gameState = 'power';
+	} else if (gameState === 'power') {
+		launchBall();
+	} else if (gameState === 'frameResult') {
+		advanceFrame();
+	} else if (gameState === 'gameOver') {
+		gameState = 'title';
+	}
+}
+
+function launchBall() {
+	const speed = 4 + power * 0.08;
+	ballVX = Math.sin(aimAngle) * speed;
+	ballVY = -Math.cos(aimAngle) * speed;
+	gameState = 'rolling';
+	pinsKnockedThisRoll = 0;
+	playSfx('launch');
+}
+
+function advanceFrame() {
+	flashText = '';
+	if (frame >= 10) {
+		gameState = 'gameOver';
+		return;
+	}
+
+	if (frame === 9) {
+		let rolls10 = scores[9];
+		if (rollInFrame === 0) {
+			if (rolls10[0] === 10) {
+				rollInFrame = 1;
+				initPins();
+			} else {
+				rollInFrame = 1;
+			}
+			resetBall();
+			gameState = 'aiming';
+			return;
+		}
+		if (rollInFrame === 1) {
+			if (rolls10[0] === 10 && rolls10[1] === 10) {
+				rollInFrame = 2;
+				initPins();
+			} else if (rolls10[0] === 10) {
+				rollInFrame = 2;
+			} else if ((rolls10[0] + rolls10[1]) === 10) {
+				rollInFrame = 2;
+				initPins();
+			} else {
+				frame = 10;
+				recalcScores();
+				gameState = 'gameOver';
+				return;
+			}
+			resetBall();
+			gameState = 'aiming';
+			return;
+		}
+		if (rollInFrame === 2) {
+			frame = 10;
+			recalcScores();
+			gameState = 'gameOver';
+			return;
+		}
+	}
+
+	if (rollInFrame === 0 && scores[frame][0] === 10) {
+		frame++;
+		rollInFrame = 0;
+		initPins();
+	} else if (rollInFrame === 1) {
+		frame++;
+		rollInFrame = 0;
+		initPins();
+	} else {
+		rollInFrame = 1;
+	}
+
+	resetBall();
+	gameState = frame >= 10 ? 'gameOver' : 'aiming';
+}
+
+function checkPinCollisions() {
+	const ballSpeed = Math.sqrt(ballVX * ballVX + ballVY * ballVY);
+	pins.forEach(pin => {
+		if (!pin.alive) return;
+		const dx = ballX - pin.x;
+		const dy = ballY - pin.y;
+		const dist = Math.sqrt(dx * dx + dy * dy);
+		if (dist < ballRadius + PIN_RADIUS) {
+			pin.alive = false;
+			pin.falling = true;
+			pin.fallTimer = 30;
+			const nx = dx / dist;
+			const ny = dy / dist;
+			pin.vx = -nx * ballSpeed * 1.2;
+			pin.vy = -ny * ballSpeed * 1.0;
+			pinsKnockedThisRoll++;
+			ballVX *= 0.92;
+			ballVY *= 0.95;
+			const now = performance.now();
+			if (now - lastHitSound > 90) {
+				playSfx('hit');
+				lastHitSound = now;
+			}
+		}
+	});
+}
+
+function updatePinPinCollisions() {
+	for (let i = 0; i < pins.length; i++) {
+		if (!pins[i].falling) continue;
+		const speed = Math.sqrt(pins[i].vx ** 2 + pins[i].vy ** 2);
+		if (speed < 0.9) continue;
+		for (let j = 0; j < pins.length; j++) {
+			if (i === j || !pins[j].alive) continue;
+			const dx = pins[i].x - pins[j].x;
+			const dy = pins[i].y - pins[j].y;
+			const dist = Math.sqrt(dx * dx + dy * dy);
+			if (dist < PIN_RADIUS * 1.9) {
+				pins[j].alive = false;
+				pins[j].falling = true;
+				pins[j].fallTimer = 25;
+				const nx = dx / dist;
+				const ny = dy / dist;
+				pins[j].vx = -nx * speed * 0.7;
+				pins[j].vy = -ny * speed * 0.7;
+				pinsKnockedThisRoll++;
+				const now = performance.now();
+				if (now - lastHitSound > 90) {
+					playSfx('hit');
+					lastHitSound = now;
+				}
+			}
+		}
+	}
+}
+
+function update() {
+	if (flashTimer > 0) flashTimer--;
+
+	if (gameState === 'aiming') {
+		aimAngle += aimDir * 0.02;
+		if (aimAngle > 0.45) aimDir = -1;
+		if (aimAngle < -0.45) aimDir = 1;
+	}
+
+	if (gameState === 'power') {
+		power += powerDir * 2.4;
+		if (power > 100) { power = 100; powerDir = -1; }
+		if (power < 0) { power = 0; powerDir = 1; }
+	}
+
+	if (gameState === 'rolling') {
+		ballX += ballVX;
+		ballY += ballVY;
+
+		if (ballX < LANE_LEFT + ballRadius || ballX > LANE_RIGHT - ballRadius) {
+			ballVX *= 0.92;
+			ballX = Math.max(LANE_LEFT + ballRadius, Math.min(LANE_RIGHT - ballRadius, ballX));
+		}
+
+		if (ballY < PIN_START_Y + 150 && ballY > PIN_START_Y - 20) {
+			checkPinCollisions();
+		}
+
+		pins.forEach(pin => {
+			if (pin.falling) {
+				pin.x += pin.vx;
+				pin.y += pin.vy;
+				pin.vx *= 0.95;
+				pin.vy *= 0.95;
+				if (pin.fallTimer === 20 || pin.fallTimer === 12 || pin.fallTimer === 6) {
+					playSfx('hit');
+				}
+				pin.fallTimer--;
+			}
+		});
+
+		updatePinPinCollisions();
+
+		if (ballY < -40 || ballY > H + 40) endRoll();
+	}
+}
+
+function endRoll() {
+	scores[frame].push(pinsKnockedThisRoll);
+	rolls.push(pinsKnockedThisRoll);
+	recalcScores();
+
+	const standingPins = pins.filter(p => p.alive).length;
+	let isStrike = false;
+	let isSpare = false;
+
+	if (frame === 9) {
+		if (rollInFrame === 0 && pinsKnockedThisRoll === 10) isStrike = true;
+		if (rollInFrame === 1) {
+			if (pinsKnockedThisRoll === 10) isStrike = true;
+			if (scores[9][0] < 10 && scores[9][0] + pinsKnockedThisRoll === 10) isSpare = true;
+		}
+		if (rollInFrame === 2 && pinsKnockedThisRoll === 10) isStrike = true;
+	} else {
+		if (rollInFrame === 0 && pinsKnockedThisRoll === 10) isStrike = true;
+		if (rollInFrame === 1 && standingPins === 0) isSpare = true;
+	}
+
+	if (isStrike) {
+		flashText = 'STRIKE!';
+		flashColor = COL.strike;
+		flashTimer = 90;
+		playSfx('strike');
+	} else if (isSpare) {
+		flashText = 'SPARE!';
+		flashColor = COL.spare;
+		flashTimer = 90;
+		playSfx('spare');
+	}
+
+	gameState = 'frameResult';
+}
+
+function drawLane() {
+	ctx.fillStyle = COL.gutter;
+	ctx.fillRect(0, 0, GUTTER_W, H);
+	ctx.fillRect(W - GUTTER_W, 0, GUTTER_W, H);
+
+	ctx.fillStyle = COL.lane;
+	ctx.fillRect(GUTTER_W, 0, W - GUTTER_W * 2, H);
+
+	ctx.strokeStyle = COL.laneEdge;
+	ctx.lineWidth = 1;
+	ctx.globalAlpha = 0.3;
+	for (let bx = GUTTER_W + 30; bx < W - GUTTER_W; bx += 30) {
+		ctx.beginPath();
+		ctx.moveTo(bx, 0);
+		ctx.lineTo(bx, H);
+		ctx.stroke();
+	}
+	ctx.globalAlpha = 1;
+
+	ctx.fillStyle = '#f0d98c';
+	ctx.fillRect(GUTTER_W, H - 150, W - GUTTER_W * 2, 3);
+}
+
+function drawPins() {
+	pins.forEach(pin => {
+		if (!pin.alive && !pin.falling) return;
+		if (pin.falling && pin.fallTimer <= 0) return;
+
+		const px = Math.floor(pin.x);
+		const py = Math.floor(pin.y);
+
+		const scale = (PIN_RADIUS * 2) / 10;
+		const headW = Math.max(1, Math.round(6 * scale));
+		const headH = Math.max(1, Math.round(5 * scale));
+		const neckW = Math.max(1, Math.round(4 * scale));
+		const neckH = Math.max(1, Math.round(4 * scale));
+		const bodyW = Math.max(1, Math.round(8 * scale));
+		const bodyH = Math.max(1, Math.round(4 * scale));
+		const baseW = Math.max(1, Math.round(10 * scale));
+		const baseH = Math.max(1, Math.round(4 * scale));
+		const stripeW = Math.max(1, Math.round(6 * scale));
+		const stripeH = Math.max(1, Math.round(2 * scale));
+		const shadeW = Math.max(1, Math.round(2 * scale));
+
+		const headX = Math.round(px - headW / 2);
+		const neckX = Math.round(px - neckW / 2);
+		const bodyX = Math.round(px - bodyW / 2);
+		const baseX = Math.round(px - baseW / 2);
+		const stripeX = Math.round(px - stripeW / 2);
+
+		const headY = Math.round(py - 12 * scale);
+		const neckY = Math.round(py - 7 * scale);
+		const bodyY = Math.round(py - 3 * scale);
+		const baseY = Math.round(py + 1 * scale);
+		const stripeY = Math.round(py - 6 * scale);
+
+		ctx.fillStyle = pin.alive ? COL.pin : '#999';
+		ctx.fillRect(headX, headY, headW, headH);
+		ctx.fillRect(neckX, neckY, neckW, neckH);
+		ctx.fillRect(bodyX, bodyY, bodyW, bodyH);
+		ctx.fillRect(baseX, baseY, baseW, baseH);
+
+		ctx.fillStyle = pin.alive ? COL.pinShade : '#777';
+		ctx.fillRect(Math.round(px + 2 * scale), bodyY, shadeW, bodyH);
+		ctx.fillRect(Math.round(px + 3 * scale), baseY, shadeW, baseH);
+
+		ctx.fillStyle = COL.pinStripe;
+		ctx.fillRect(stripeX, stripeY, stripeW, stripeH);
+	});
+}
+
+function drawBall() {
+	const bx = Math.floor(ballX);
+	const by = Math.floor(ballY);
+
+	ctx.fillStyle = 'rgba(0,0,0,0.3)';
+	ctx.fillRect(bx - ballRadius + 2, by - ballRadius + 2, ballRadius * 2, ballRadius * 2);
+
+	ctx.fillStyle = COL.ball;
+	for (let dy = -ballRadius; dy <= ballRadius; dy++) {
+		for (let dx = -ballRadius; dx <= ballRadius; dx++) {
+			if (dx * dx + dy * dy <= ballRadius * ballRadius) {
+				ctx.fillRect(bx + dx, by + dy, 1, 1);
+			}
+		}
+	}
+
+	ctx.fillStyle = '#a11';
+	ctx.fillRect(bx - 4, by - 4, 2, 2);
+	ctx.fillRect(bx + 1, by - 4, 2, 2);
+	ctx.fillRect(bx - 2, by - 1, 2, 2);
+	ctx.fillStyle = COL.ballShine;
+	ctx.fillRect(bx - 6, by - 6, 3, 2);
+}
+
+function drawUI() {
+	if (gameState === 'aiming') {
+		const len = 120;
+		const ex = ballX + Math.sin(aimAngle) * len;
+		const ey = ballY - Math.cos(aimAngle) * len;
+		ctx.strokeStyle = COL.ball;
+		ctx.lineWidth = 2;
+		ctx.setLineDash([6, 4]);
+		ctx.beginPath();
+		ctx.moveTo(ballX, ballY);
+		ctx.lineTo(ex, ey);
+		ctx.stroke();
+		ctx.setLineDash([]);
+		drawText('AIM', LANE_CENTER, H - 40, 14, '#fff');
+	}
+
+	if (gameState === 'power') {
+		const meterX = W - 20;
+		const meterH = 200;
+		const meterY = H - 280;
+		ctx.fillStyle = '#222';
+		ctx.fillRect(meterX - 8, meterY, 16, meterH);
+		const fill = (power / 100) * meterH;
+		ctx.fillStyle = power > 80 ? '#ff3333' : power > 50 ? '#ffaa00' : '#22cc55';
+		ctx.fillRect(meterX - 6, meterY + meterH - fill, 12, fill);
+		ctx.strokeStyle = '#fff';
+		ctx.lineWidth = 2;
+		ctx.strokeRect(meterX - 8, meterY, 16, meterH);
+		drawText('POWER', LANE_CENTER, H - 40, 14, '#fff');
+	}
+
+	const frameDisplay = Math.min(frame + 1, 10);
+	const rollDisplay = rollInFrame + 1;
+	drawText(`Frame ${frameDisplay} | Roll ${rollDisplay}`, LANE_CENTER, 18, 12, '#bbb');
+}
+
+function drawScoreboard() {
+	const sbY = H - 140;
+	const sbH = 44;
+	const frameW = (W - 20) / 10;
+	ctx.fillStyle = COL.scoreBg;
+	ctx.fillRect(10, sbY, W - 20, sbH);
+	ctx.strokeStyle = '#1a2d4a';
+	ctx.lineWidth = 1;
+
+	for (let f = 0; f < TOTAL_FRAMES; f++) {
+		const fx = 10 + f * frameW;
+		ctx.strokeRect(fx, sbY, frameW, sbH);
+		drawText(`${f + 1}`, fx + frameW / 2, sbY + 10, 8, '#789');
+
+		const rollScores = scores[f] || [];
+		if (rollScores.length > 0) {
+			if (f < 9) {
+				let r1 = rollScores[0] === 10 ? 'X' : `${rollScores[0]}`;
+				if (rollScores[0] === 0) r1 = '-';
+				drawText(r1, fx + frameW * 0.3, sbY + 24, 10, rollScores[0] === 10 ? COL.strike : COL.scoreText);
+				if (rollScores.length > 1 && rollScores[0] < 10) {
+					let r2 = (rollScores[0] + rollScores[1]) === 10 ? '/' : `${rollScores[1]}`;
+					if (rollScores[1] === 0) r2 = '-';
+					drawText(r2, fx + frameW * 0.7, sbY + 24, 10, r2 === '/' ? COL.spare : COL.scoreText);
+				}
+			} else {
+				for (let r = 0; r < rollScores.length; r++) {
+					let rt;
+					if (rollScores[r] === 10) rt = 'X';
+					else if (r > 0 && rollScores[r - 1] !== 10 && rollScores[r - 1] + rollScores[r] === 10) rt = '/';
+					else if (rollScores[r] === 0) rt = '-';
+					else rt = `${rollScores[r]}`;
+					const rx = fx + frameW * (0.2 + r * 0.3);
+					drawText(rt, rx, sbY + 24, 9, rt === 'X' ? COL.strike : rt === '/' ? COL.spare : COL.scoreText);
+				}
+			}
+		}
+
+		if (frameScores[f] !== undefined) {
+			let cumul = 0;
+			for (let i = 0; i <= f; i++) cumul += (frameScores[i] || 0);
+			drawText(`${cumul}`, fx + frameW / 2, sbY + 38, 9, '#fff');
+		}
+	}
+}
+
+function drawTitle() {
+	ctx.fillStyle = COL.bg;
+	ctx.fillRect(0, 0, W, H);
+	drawText('BOWLER', LANE_CENTER, 200, 42, '#ff6b6b');
+	drawText('Click or Press Space', LANE_CENTER, 280, 16, '#fff');
+	drawText('Set AIM then POWER', LANE_CENTER, 310, 12, '#aaa');
+}
+
+function drawGameOver() {
+	drawLane();
+	drawScoreboard();
+	ctx.fillStyle = 'rgba(0,0,0,0.7)';
+	ctx.fillRect(0, 0, W, H);
+	drawText('GAME OVER', LANE_CENTER, 220, 32, '#ff6b6b');
+	drawText(`FINAL SCORE: ${totalScore}`, LANE_CENTER, 270, 20, '#fff');
+	drawText('Click or Space to play again', LANE_CENTER, 320, 12, '#bbb');
+}
+
+function draw() {
+	ctx.fillStyle = COL.bg;
+	ctx.fillRect(0, 0, W, H);
+
+	if (gameState === 'title') {
+		drawTitle();
+		return;
+	}
+	if (gameState === 'gameOver') {
+		drawGameOver();
+		return;
+	}
+
+	drawLane();
+	drawPins();
+	drawBall();
+	drawUI();
+	drawScoreboard();
+
+	if (flashText && flashTimer > 0) {
+		ctx.save();
+		ctx.globalAlpha = Math.min(1, flashTimer / 20);
+		drawText(flashText, LANE_CENTER, 320, 32, flashColor);
+		ctx.restore();
+	}
+
+	if (gameState === 'frameResult') {
+		drawText('Click or Space to continue', LANE_CENTER, H - 20, 12, '#888');
+	}
+}
+
+function gameLoop() {
+	update();
+	draw();
+	requestAnimationFrame(gameLoop);
+}
+
+initPins();
+resetBall();
+gameLoop();
+</script>
+</body>
+</html>
