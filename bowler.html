@@ -64,15 +64,15 @@ let powerDir = 1;
 let ballX, ballY, ballVX, ballVY;
 let ballRadius = 20;
 
-const GUTTER_W = 40;
+const GUTTER_W = 120;
 const LANE_LEFT = GUTTER_W;
 const LANE_RIGHT = W - GUTTER_W;
 const LANE_CENTER = W / 2;
 
 const PIN_RADIUS = 8;
-const PIN_SPACING_X = 38;
-const PIN_SPACING_Y = 38;
-const PIN_START_Y = 120;
+const PIN_SPACING_X = 25;
+const PIN_SPACING_Y = 25;
+const PIN_START_Y = 95;
 
 const pinFormation = [
 	{r:0, c:0},
@@ -379,13 +379,13 @@ function updatePinPinCollisions() {
 	for (let i = 0; i < pins.length; i++) {
 		if (!pins[i].falling) continue;
 		const speed = Math.sqrt(pins[i].vx ** 2 + pins[i].vy ** 2);
-		if (speed < 0.9) continue;
+		if (speed < 0.5) continue;
 		for (let j = 0; j < pins.length; j++) {
 			if (i === j || !pins[j].alive) continue;
 			const dx = pins[i].x - pins[j].x;
 			const dy = pins[i].y - pins[j].y;
 			const dist = Math.sqrt(dx * dx + dy * dy);
-			if (dist < PIN_RADIUS * 1.9) {
+			if (dist < PIN_RADIUS * 2.4) {
 				pins[j].alive = false;
 				pins[j].falling = true;
 				pins[j].fallTimer = 25;
