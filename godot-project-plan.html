@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Godot Game Project Plan</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --panel: rgba(19, 23, 31, 0.92);
+      --panel-2: rgba(30, 35, 47, 0.95);
+      --line: rgba(132, 161, 255, 0.18);
+      --text: #eef2ff;
+      --muted: #a9b4d0;
+      --accent: #8ac7ff;
+      --accent-2: #8ef0b5;
+      --warn: #ffcf6e;
+      --danger: #ff7a91;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(138, 199, 255, 0.18), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(142, 240, 181, 0.12), transparent 28%),
+        linear-gradient(180deg, #11141a 0%, #0b0d12 100%);
+      padding: 32px 18px 48px;
+    }
+
+    .wrap {
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    .hero,
+    .panel {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      border-radius: 22px;
+      backdrop-filter: blur(8px);
+    }
+
+    .hero {
+      padding: 28px;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, rgba(138, 199, 255, 0.12), rgba(142, 240, 181, 0.08));
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(2rem, 4vw, 3.3rem);
+      line-height: 1.05;
+    }
+
+    .lead {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+      max-width: 80ch;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .tag {
+      padding: 7px 11px;
+      border-radius: 999px;
+      border: 1px solid rgba(138, 199, 255, 0.28);
+      background: rgba(138, 199, 255, 0.10);
+      color: var(--text);
+      font-size: 0.92rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+    }
+
+    .panel {
+      padding: 20px;
+      background: var(--panel-2);
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      font-size: 1.15rem;
+      color: var(--accent);
+    }
+
+    h3 {
+      margin: 18px 0 10px;
+      font-size: 1rem;
+      color: var(--accent-2);
+    }
+
+    p,
+    li {
+      line-height: 1.55;
+      color: var(--text);
+    }
+
+    ul,
+    ol {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    li {
+      margin: 8px 0;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .status {
+      display: inline-block;
+      margin-right: 8px;
+      margin-bottom: 8px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 0.88rem;
+      border: 1px solid rgba(142, 240, 181, 0.24);
+      background: rgba(142, 240, 181, 0.10);
+    }
+
+    .danger {
+      color: var(--danger);
+      font-weight: 700;
+    }
+
+    .warn {
+      color: var(--warn);
+      font-weight: 700;
+    }
+
+    .wide {
+      grid-column: 1 / -1;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 16px;
+      margin-top: 8px;
+    }
+
+    th,
+    td {
+      padding: 12px 10px;
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid rgba(138, 199, 255, 0.14);
+    }
+
+    th {
+      color: var(--accent);
+      font-size: 0.95rem;
+    }
+
+    td {
+      color: var(--text);
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <h1>Godot Game Project Plan</h1>
+      <p class="lead">
+        This page converts the assignment brief into a focused build plan for a 5-level 2D platform puzzle runner.
+        It keeps the scope tight, tracks the week-by-week work, and highlights the hard limits so the project stays achievable.
+      </p>
+      <div class="tags">
+        <span class="tag">Track: Godot game</span>
+        <span class="tag">Format: Browser-playable HTML5 export</span>
+        <span class="tag">Deliverable: 30-second trailer</span>
+        <span class="tag">Scope: 2D only</span>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="panel">
+        <h2>Student Info</h2>
+        <ul>
+          <li><strong>Name:</strong> Ana Moravic-Balkanski</li>
+          <li><strong>Date:</strong> 2026-05-05</li>
+          <li><strong>Class:</strong> ICT 10 (2025–26)</li>
+        </ul>
+        <p class="muted">The project is already locked to one focused track, so the rest of the plan only supports the Godot game.</p>
+      </article>
+
+      <article class="panel">
+        <h2>Project Goal</h2>
+        <p>
+          Build a <strong>5-level platform puzzle runner</strong> with detailed pixel sprites, enemy AI, a boss battle, and a short gameplay trailer.
+          The game should be playable in a browser through an HTML5 export and be stable enough for classmates to finish.
+        </p>
+      </article>
+
+      <article class="panel wide">
+        <h2>Success Criteria</h2>
+        <ol>
+          <li>All 5 levels are complete and playable from start to finish without crashing.</li>
+          <li>The player can jump, solve at least 2 puzzle types per level, and take damage from enemies.</li>
+          <li>Level 5 includes a boss battle as the final encounter.</li>
+          <li>The game exports and runs in a browser via itch.io without errors.</li>
+          <li>A 30-second trailer captures gameplay clearly and can be shared.</li>
+        </ol>
+      </article>
+
+      <article class="panel">
+        <h2>What Is Already True</h2>
+        <div class="status">Scene experience: done</div>
+        <div class="status">GDScript: comfortable</div>
+        <div class="status">Node system: understood</div>
+        <div class="status">Sprites and animation: done</div>
+        <p class="muted">The only major unknown is HTML5 export, which is part of the research checklist.</p>
+      </article>
+
+      <article class="panel">
+        <h2>Research Checklist</h2>
+        <ul>
+          <li>Godot Beginners Tutorial Series: scenes and nodes</li>
+          <li>Official docs: nodes and scene system</li>
+          <li>Importing and animating sprites in Godot</li>
+          <li>Official docs: HTML5 export guide</li>
+        </ul>
+      </article>
+
+      <article class="panel wide">
+        <h2>Hard Scope Cuts</h2>
+        <p class="warn">These are binding and should not be added back during development.</p>
+        <ul>
+          <li>No mobile or phone optimization.</li>
+          <li>No 3D graphics.</li>
+          <li>No online multiplayer.</li>
+          <li>No procedural level generation.</li>
+          <li>No voice acting.</li>
+          <li>No custom shaders or advanced graphics effects.</li>
+        </ul>
+      </article>
+
+      <article class="panel wide">
+        <h2>Stretch Goals</h2>
+        <p class="muted">Only attempt these if all 5 levels and the boss are complete by the end of Week 5.</p>
+        <ul>
+          <li>Custom sound effects and background music.</li>
+          <li>Enhanced enemy variety with 5 or more unique types.</li>
+          <li>Unlockable difficulty modes.</li>
+          <li>In-game tutorials and help screens.</li>
+          <li>Polished particle effects for attacks and events.</li>
+        </ul>
+      </article>
+
+      <article class="panel wide">
+        <h2>Weekly Timeline</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Week</th>
+              <th>Focus</th>
+              <th>Goals</th>
+              <th>Deliverable</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>W1</td>
+              <td>Player controller & Level 1</td>
+              <td>Movement, jump, collision, first enemy, first puzzle</td>
+              <td>Level 1 playable end-to-end</td>
+            </tr>
+            <tr>
+              <td>W2</td>
+              <td>Level 2 design & build</td>
+              <td>Platform challenges, puzzle variety, enemy encounters</td>
+              <td>Level 2 playable end-to-end</td>
+            </tr>
+            <tr>
+              <td>W3</td>
+              <td>Level 3 + enemy AI polish</td>
+              <td>Advanced puzzles, smarter enemy behavior, game feel</td>
+              <td>Level 3 playable end-to-end</td>
+            </tr>
+            <tr>
+              <td>W4</td>
+              <td>Level 4 + boss encounter prep</td>
+              <td>Complex puzzles, multi-stage challenges</td>
+              <td>Level 4 playable end-to-end</td>
+            </tr>
+            <tr>
+              <td>W5</td>
+              <td>Level 5 + boss battle</td>
+              <td>Final boss, difficulty curve, balance testing</td>
+              <td>All 5 levels complete and playtested</td>
+            </tr>
+            <tr>
+              <td>W6</td>
+              <td>Polish, export, trailer</td>
+              <td>Bug fixes, menu system, HTML5 export, trailer</td>
+              <td>Game on itch.io + trailer video</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="panel">
+        <h2>Planned Week Dates</h2>
+        <ul>
+          <li>W1: 2026-05-13 to 2026-05-17</li>
+          <li>W2: 2026-05-20 to 2026-05-24</li>
+          <li>W3: 2026-05-27 to 2026-05-31</li>
+          <li>W4: 2026-06-03 to 2026-06-07</li>
+          <li>W5: 2026-06-10 to 2026-06-14</li>
+          <li>W6: 2026-06-17 to 2026-06-21</li>
+        </ul>
+      </article>
+
+      <article class="panel wide">
+        <h2>Week 1 Plan</h2>
+        <p>
+          The current status is ahead of schedule: the player controller is finished, Level 1 is started, and the remaining time should go into enemy movement, puzzle integration, and polish.
+        </p>
+        <h3>Monday</h3>
+        <ul>
+          <li>Created the Godot project and Player scene using CharacterBody2D.</li>
+          <li>Added a placeholder sprite and movement script.</li>
+          <li>Tested keyboard input.</li>
+        </ul>
+        <h3>Tuesday</h3>
+        <ul>
+          <li>Implemented jump and fall physics.</li>
+          <li>Tuned gravity and jump strength.</li>
+          <li>Built the Level 1 base layer with platform segments.</li>
+        </ul>
+        <h3>Wednesday</h3>
+        <ul>
+          <li>Finish Level 1 platform layout.</li>
+          <li>Verify the player can move through the full platform sequence smoothly.</li>
+          <li class="muted">Bonus: finish the first enemy if time allows.</li>
+        </ul>
+        <h3>Thursday</h3>
+        <ul>
+          <li>Implement Skeleton patrol movement with boundary detection.</li>
+          <li>Add collision damage to the player with knockback.</li>
+          <li>Playtest the enemy encounter and adjust feel.</li>
+        </ul>
+        <h3>Friday</h3>
+        <ul>
+          <li>Implement the switch + door puzzle mechanic.</li>
+          <li>Integrate the puzzle into the Level 1 flow.</li>
+          <li>Playtest the full level and record a short demo video.</li>
+        </ul>
+      </article>
+
+      <article class="panel">
+        <h2>Friday Artifact</h2>
+        <ul>
+          <li>Player controller fully functional.</li>
+          <li>Level 1 complete and playable end-to-end.</li>
+          <li>First enemy type created and placed.</li>
+          <li>Enemy patrol movement working with damage on contact.</li>
+          <li>First puzzle integrated into the level.</li>
+          <li>1–2 minute video demo recorded.</li>
+        </ul>
+      </article>
+
+      <article class="panel">
+        <h2>Evaluation Moment</h2>
+        <p>
+          Playtest Level 1 fully and record three improvements for Week 2 in no more than 30 minutes. The point is to keep moving forward while tightening the gameplay.
+        </p>
+      </article>
+    </section>
+
+    <p class="footer">
+      Focus rule: one track, one game, five levels, one trailer.
+      Keep the scope narrow so the project finishes cleanly.
+    </p>
+  </main>
+</body>
+</html>

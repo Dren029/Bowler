@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to Make a Tron Game in Godot</title>
+  <style>
+    :root {
+      --bg: #081018;
+      --panel: rgba(10, 20, 34, 0.88);
+      --panel-border: rgba(95, 229, 255, 0.18);
+      --text: #e9f6ff;
+      --muted: #9bb1c5;
+      --accent: #47e6ff;
+      --accent-2: #9cff57;
+      --danger: #ff6b8b;
+      --shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top, rgba(71, 230, 255, 0.18), transparent 35%),
+        radial-gradient(circle at bottom right, rgba(156, 255, 87, 0.14), transparent 28%),
+        linear-gradient(180deg, #081018 0%, #05090e 100%);
+      min-height: 100vh;
+      padding: 40px 20px 56px;
+    }
+
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, rgba(71, 230, 255, 0.14), rgba(255, 107, 139, 0.08));
+      border: 1px solid var(--panel-border);
+      box-shadow: var(--shadow);
+      border-radius: 24px;
+      padding: 28px;
+      margin-bottom: 24px;
+      backdrop-filter: blur(10px);
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      letter-spacing: 0.02em;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+      max-width: 70ch;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      box-shadow: var(--shadow);
+      border-radius: 20px;
+      padding: 20px;
+    }
+
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 1.2rem;
+      color: var(--accent);
+    }
+
+    ol {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    li {
+      margin: 10px 0;
+      line-height: 1.55;
+      color: var(--text);
+    }
+
+    .note {
+      color: var(--muted);
+      margin-top: 10px;
+      line-height: 1.55;
+    }
+
+    .tag {
+      display: inline-block;
+      margin: 0 8px 8px 0;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(71, 230, 255, 0.12);
+      border: 1px solid rgba(71, 230, 255, 0.25);
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+
+    .footer {
+      margin-top: 22px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      text-align: center;
+    }
+
+    .highlight {
+      color: var(--accent-2);
+      font-weight: 700;
+    }
+
+    .danger {
+      color: var(--danger);
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <h1>How to Make a Tron Game in Godot</h1>
+      <p class="subtitle">
+        This page turns the design into a practical build plan. The core idea is simple:
+        a bike moves forward forever, leaves a trail behind it, and loses if it hits a wall or any trail.
+      </p>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>1. Set up the project</h2>
+        <ol>
+          <li>Create a new Godot 4 project.</li>
+          <li>Use a 2D game for the classic Tron style.</li>
+          <li>Set the window to a clean size like 1280x720.</li>
+          <li>Pick a dark background so the neon trails stand out.</li>
+        </ol>
+      </article>
+
+      <article class="card">
+        <h2>2. Define the core loop</h2>
+        <ol>
+          <li>Each player controls a light cycle that never stops moving.</li>
+          <li>The player can only turn left or right.</li>
+          <li>The cycle leaves a trail behind it as it moves.</li>
+          <li>If it hits a wall or trail, it is eliminated.</li>
+        </ol>
+      </article>
+
+      <article class="card">
+        <h2>3. Build the main scene</h2>
+        <ol>
+          <li>Create a root <span class="highlight">Node2D</span> scene called <span class="highlight">Main</span>.</li>
+          <li>Add your arena, players, and UI to this scene.</li>
+          <li>Keep the game manager in control of round state and resets.</li>
+        </ol>
+      </article>
+
+      <article class="card">
+        <h2>4. Create the bike scene</h2>
+        <ol>
+          <li>Make a separate scene for each bike.</li>
+          <li>Use <span class="highlight">CharacterBody2D</span> or <span class="highlight">Node2D</span> as the root.</li>
+          <li>Add a sprite or shape for the bike.</li>
+          <li>Store speed, direction, and turning logic in the bike script.</li>
+        </ol>
+      </article>
+
+      <article class="card">
+        <h2>5. Move continuously</h2>
+        <ol>
+          <li>Move the bike forward every frame using its facing direction.</li>
+          <li>Do not allow stopping or reversing.</li>
+          <li>Rotate in fixed steps so turns feel sharp and arcade-like.</li>
+        </ol>
+      </article>
+
+      <article class="card">
+        <h2>6. Add the trail system</h2>
+        <ol>
+          <li>Spawn trail segments behind the bike at regular distances.</li>
+          <li>Give each segment collision so it can be hit later.</li>
+          <li>Keep the trail visually bright and easy to read.</li>
+        </ol>
+      </article>
+
+      <article class="card">
+        <h2>7. Handle collisions</h2>
+        <ol>
+          <li>Check for collisions with walls, self trails, and enemy trails.</li>
+          <li>When a collision happens, mark the player as crashed.</li>
+          <li>Stop movement and trigger the round-end logic.</li>
+        </ol>
+      </article>
+
+      <article class="card">
+        <h2>8. Build the arena</h2>
+        <ol>
+          <li>Create a bounded playfield with invisible or visible walls.</li>
+          <li>Use <span class="highlight">StaticBody2D</span> nodes for the boundary.</li>
+          <li>Keep the arena simple so the focus stays on the chase.</li>
+        </ol>
+      </article>
+
+      <article class="card">
+        <h2>9. Add players and controls</h2>
+        <ol>
+          <li>Set up Input Map actions like <span class="highlight">player1_left</span> and <span class="highlight">player1_right</span>.</li>
+          <li>Assign separate controls for player 2 if you want local multiplayer.</li>
+          <li>Make sure inputs are responsive and never conflict.</li>
+        </ol>
+      </article>
+
+      <article class="card">
+        <h2>10. Win and restart logic</h2>
+        <ol>
+          <li>Track how many players are still alive.</li>
+          <li>When only one remains, declare the winner.</li>
+          <li>Add a restart button or an automatic reset after each round.</li>
+        </ol>
+      </article>
+
+      <article class="card">
+        <h2>11. Polish the presentation</h2>
+        <div class="tag">Neon bikes</div>
+        <div class="tag">Dark grid background</div>
+        <div class="tag">Glow effects</div>
+        <div class="tag">Crash sound</div>
+        <div class="tag">Round countdown</div>
+        <p class="note">
+          These details are optional, but they make the game feel much more like Tron.
+        </p>
+      </article>
+
+      <article class="card">
+        <h2>12. Test and tune</h2>
+        <ol>
+          <li>Adjust speed, arena size, and turn angle until the game feels fair.</li>
+          <li>Test collisions carefully because Tron depends on precise reactions.</li>
+          <li>Once the core loop is solid, add extras like AI or power-ups.</li>
+        </ol>
+        <p class="note">
+          The most important part is the core loop: move, trail, collide, restart.
+        </p>
+      </article>
+    </section>
+
+    <p class="footer">
+      Core rule: stay moving, avoid trails, and force your opponent into a <span class="danger">crash</span>.
+    </p>
+  </main>
+</body>
+</html>
